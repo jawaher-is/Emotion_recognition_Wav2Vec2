@@ -1,1 +1,5 @@
-
+*.npy
+/resource_files/
+/venv/
+.DS_Store
+/features/
