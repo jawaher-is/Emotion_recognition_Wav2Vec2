@@ -1,5 +1,10 @@
-*.npy
-/resource_files/
-/venv/
 .DS_Store
-/features/
+__pycache__/
+.remote-sync.json
+venv/
+resource_files/
+features/
+content/
+Test/
+*.npy
+cpu*.py
