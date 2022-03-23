@@ -1,4 +1,4 @@
-# ser_w2v2
+# Emotion_recognition_Wav2Vec2
 
 Speech Emotion Recognition on English dataset 
 
