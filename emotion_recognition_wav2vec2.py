@@ -82,6 +82,7 @@ import numpy as np
 from tqdm import tqdm
 from datasets import concatenate_datasets
 import os
+from nested_array_catcher import nested_array_catcher
 # np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 def speech_file_to_array_fn(path):
@@ -117,7 +118,7 @@ def preprocess_function(examples):
                 print(i, j) # 2791 0, 2791 1, 5097 0, 5097 1
                 print(294, type(result['input_values'][i]), type(result['input_values'][i][j])) # <class 'numpy.ndarray'> <class 'numpy.ndarray'>
                 # if isinstance(result['input_values'][i][j], np.ndarray):
-                #     print(result['input_values'][i].size, result['input_values'][i][j].size, result['input_values'][i][j])
+                #     print(result['input_values'][i].shape, result['input_values'][i][j].shape, result['input_values'][i][j])
                 result['input_values'][i] = result['input_values'][i][j]
                 print('new type: ', type(result['input_values'][i][j]), result['input_values'][i][j], result['input_values'][i])
 
@@ -164,17 +165,13 @@ def ppf(examples, split):
     # print(328, len(result['input_values']), len(result['input_values'][0]), result['input_values'][0][0]) # len:9729 len:29093 =:-0.0030048245
     print('\nASSERTING dtype')
     for i in range(len(result['input_values'])):
-        for j in range(len(result['input_values'][i])):
-            try:
-                assert isinstance(result['input_values'][i][j], np.float32)
-            except Exception as e:
-                print(i, j) # 2791 0, 2791 1, 5097 0, 5097 1,
-                # print(e)
-                # print(349, type(result['input_values'][i]), type(result['input_values'][i][j])) # <class 'numpy.ndarray'> <class 'numpy.ndarray'>
-                # if isinstance(result['input_values'][i][j], np.ndarray):
-                    # print(result['input_values'][i].size, result['input_values'][i][j].size, result['input_values'][i][j])
-                result['input_values'][i] = result['input_values'][i][j]
-                # print('new type: ', type(result['input_values'][i][j]), result['input_values'][i][j], result['input_values'][i])
+        result['input_values'][i] = nested_array_catcher(result['input_values'][i])
+        # for j in range(len(result['input_values'][i])):
+        #     try:
+        #         assert isinstance(result['input_values'][i][j], np.float32)
+        #     except Exception as e:
+        #         print(i, j) # 2791 0, 2791 1, 5097 0, 5097 1,
+        #         result['input_values'][i] = result['input_values'][i][j]
 
     return result
 
