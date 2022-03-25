@@ -1,5 +1,5 @@
 """
-Evaluation
+Evaluation of the model trained on Ravdess, Crema, Tess, and Savee datasets
 """
 
 import librosa
@@ -138,10 +138,10 @@ test_dataset = load_dataset("csv", data_files={"test": "./content/data/test.csv"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Device: {device}")
 
-# load the pretrained checkpoint
+# load the pretrained checkpoint on Ravdess, Crema, Tess, and Savee
 # model_name_or_path = "m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition"
 processor_name_or_path = "m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition" ##
-model_name_or_path = "./content/wav2vec2-xlsr-greek-speech-emotion-recognition/checkpoint-1210" ##
+model_name_or_path = "./content/wav2vec2-xlsr-greek-speech-emotion-recognition/checkpoint-1210" ## model trained on on Ravdess, Crema, Tess, and Savee
 config = AutoConfig.from_pretrained(model_name_or_path)
 processor = Wav2Vec2Processor.from_pretrained(processor_name_or_path) ##
 model = Wav2Vec2ForSpeechClassification.from_pretrained(model_name_or_path).to(device)

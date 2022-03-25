@@ -17,6 +17,11 @@ During fine-tuning week hosted by HuggingFace, more than 300 people participated
 This model was shown significant results in many low-resources languages. You can see the [competition board](https://paperswithcode.com/dataset/common-voice) or even testing the models from the [HuggingFace hub](https://huggingface.co/models?filter=xlsr-fine-tuning-week).
 
 """
+import os
+
+# prepare dataset
+if __name__ == '__main__' and not (os.path.exists("./content/data/train.csv") or os.path.exists("./content/data/train.csv")):
+    import prepare_data_paths
 
 """## Prepare Data for Training"""
 
@@ -81,7 +86,6 @@ import torchaudio
 import numpy as np
 from tqdm import tqdm
 from datasets import concatenate_datasets
-import os
 from nested_array_catcher import nested_array_catcher
 
 def speech_file_to_array_fn(path):
@@ -553,153 +557,159 @@ setInterval(ConnectButton,60000);
 
 trainer.train()
 
-"""The training loss goes down and we can see that the Acurracy on the test set also improves nicely. Because this notebook is just for demonstration purposes, we can stop here.
+# Evaluation
+import evaluation
 
-The resulting model of this notebook has been saved to [m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition](https://huggingface.co/m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition)
+# Prediction
+# import prediction
 
-As a final check, let's load the model and verify that it indeed has learned to recognize the emotion in the speech.
-
-Let's first load the pretrained checkpoint.
-
-## Evaluation
-"""
-
-import librosa
-from sklearn.metrics import classification_report
-print(760)
-test_dataset = load_dataset("csv", data_files={"test": "./content/data/test.csv"}, delimiter="\t")["test"]
-test_dataset
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Device: {device}")
-
-model_name_or_path = "m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition"
-config = AutoConfig.from_pretrained(model_name_or_path)
-processor = Wav2Vec2Processor.from_pretrained(model_name_or_path)
-model = Wav2Vec2ForSpeechClassification.from_pretrained(model_name_or_path).to(device)
-
-def speech_file_to_array_fn(batch):
-    speech_array, sampling_rate = torchaudio.load(batch["path"])
-    speech_array = speech_array.squeeze().numpy()
-    speech_array = librosa.resample(np.asarray(speech_array), sampling_rate, processor.feature_extractor.sampling_rate)
-
-    batch["speech"] = speech_array
-    return batch
-
-
-def predict(batch):
-    features = processor(batch["speech"], sampling_rate=processor.feature_extractor.sampling_rate, return_tensors="pt", padding=True)
-
-    input_values = features.input_values.to(device)
-    attention_mask = features.attention_mask.to(device)
-
-    with torch.no_grad():
-        logits = model(input_values, attention_mask=attention_mask).logits
-
-    pred_ids = torch.argmax(logits, dim=-1).detach().cpu().numpy()
-    batch["predicted"] = pred_ids
-    return batch
-
-test_dataset = test_dataset.map(speech_file_to_array_fn)
-
-result = test_dataset.map(predict, batched=True, batch_size=8)
-
-label_names = [config.id2label[i] for i in range(config.num_labels)]
-label_names
-
-y_true = [config.label2id[name] for name in result["emotion"]]
-y_pred = result["predicted"]
-
-print(y_true[:5])
-print(y_pred[:5])
-
-print(classification_report(y_true, y_pred, target_names=label_names))
-
-"""# Prediction"""
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torchaudio
-from transformers import AutoConfig, Wav2Vec2Processor
-
-import librosa
-## import IPython.display as ipd
-import numpy as np
-import pandas as pd
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model_name_or_path = "m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition"
-config = AutoConfig.from_pretrained(model_name_or_path)
-processor = Wav2Vec2Processor.from_pretrained(model_name_or_path)
-sampling_rate = processor.feature_extractor.sampling_rate
-model = Wav2Vec2ForSpeechClassification.from_pretrained(model_name_or_path).to(device)
-
-def speech_file_to_array_fn(path, sampling_rate):
-    speech_array, _sampling_rate = torchaudio.load(path)
-    resampler = torchaudio.transforms.Resample(_sampling_rate)
-    speech = resampler(speech_array).squeeze().numpy()
-    return speech
-
-
-def predict(path, sampling_rate):
-    speech = speech_file_to_array_fn(path, sampling_rate)
-    features = processor(speech, sampling_rate=sampling_rate, return_tensors="pt", padding=True)
-
-    input_values = features.input_values.to(device)
-    attention_mask = features.attention_mask.to(device)
-
-    with torch.no_grad():
-        logits = model(input_values, attention_mask=attention_mask).logits
-
-    scores = F.softmax(logits, dim=1).detach().cpu().numpy()[0]
-    outputs = [{"Emotion": config.id2label[i], "Score": f"{round(score * 100, 3):.1f}%"} for i, score in enumerate(scores)]
-    return outputs
-
-
-STYLES = """
-<style>
-div.display_data {
-    margin: 0 auto;
-    max-width: 500px;
-}
-table.xxx {
-    margin: 50px !important;
-    float: right !important;
-    clear: both !important;
-}
-table.xxx td {
-    min-width: 300px !important;
-    text-align: center !important;
-}
-</style>
-""".strip()
-
-def prediction(df_row):
-    path, emotion = df_row["path"], df_row["emotion"]
-    df = pd.DataFrame([{"Emotion": emotion, "Sentence": "    "}])
-    setup = {
-        'border': 2,
-        'show_dimensions': True,
-        'justify': 'center',
-        'classes': 'xxx',
-        'escape': False,
-    }
-    ## ipd.display(ipd.HTML(STYLES + df.to_html(**setup) + "<br />"))
-    speech, sr = torchaudio.load(path)
-    speech = speech[0].numpy().squeeze()
-    speech = librosa.resample(np.asarray(speech), sr, sampling_rate)
-    ## ipd.display(ipd.Audio(data=np.asarray(speech), autoplay=True, rate=sampling_rate))
-
-    outputs = predict(path, sampling_rate)
-    r = pd.DataFrame(outputs)
-    ## ipd.display(ipd.HTML(STYLES + r.to_html(**setup) + "<br />"))
-
-test = pd.read_csv("./content/data/test.csv", sep="\t")
-test.head()
-
-prediction(test.iloc[0])
-
-prediction(test.iloc[1])
-
-prediction(test.iloc[2])
+# """The training loss goes down and we can see that the Acurracy on the test set also improves nicely. Because this notebook is just for demonstration purposes, we can stop here.
+#
+# The resulting model of this notebook has been saved to [m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition](https://huggingface.co/m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition)
+#
+# As a final check, let's load the model and verify that it indeed has learned to recognize the emotion in the speech.
+#
+# Let's first load the pretrained checkpoint.
+#
+# ## Evaluation
+# """
+#
+# import librosa
+# from sklearn.metrics import classification_report
+# print(760)
+# test_dataset = load_dataset("csv", data_files={"test": "./content/data/test.csv"}, delimiter="\t")["test"]
+# test_dataset
+#
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# print(f"Device: {device}")
+#
+# model_name_or_path = "m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition"
+# config = AutoConfig.from_pretrained(model_name_or_path)
+# processor = Wav2Vec2Processor.from_pretrained(model_name_or_path)
+# model = Wav2Vec2ForSpeechClassification.from_pretrained(model_name_or_path).to(device)
+#
+# def speech_file_to_array_fn(batch):
+#     speech_array, sampling_rate = torchaudio.load(batch["path"])
+#     speech_array = speech_array.squeeze().numpy()
+#     speech_array = librosa.resample(np.asarray(speech_array), sampling_rate, processor.feature_extractor.sampling_rate)
+#
+#     batch["speech"] = speech_array
+#     return batch
+#
+#
+# def predict(batch):
+#     features = processor(batch["speech"], sampling_rate=processor.feature_extractor.sampling_rate, return_tensors="pt", padding=True)
+#
+#     input_values = features.input_values.to(device)
+#     attention_mask = features.attention_mask.to(device)
+#
+#     with torch.no_grad():
+#         logits = model(input_values, attention_mask=attention_mask).logits
+#
+#     pred_ids = torch.argmax(logits, dim=-1).detach().cpu().numpy()
+#     batch["predicted"] = pred_ids
+#     return batch
+#
+# test_dataset = test_dataset.map(speech_file_to_array_fn)
+#
+# result = test_dataset.map(predict, batched=True, batch_size=8)
+#
+# label_names = [config.id2label[i] for i in range(config.num_labels)]
+# label_names
+#
+# y_true = [config.label2id[name] for name in result["emotion"]]
+# y_pred = result["predicted"]
+#
+# print(y_true[:5])
+# print(y_pred[:5])
+#
+# print(classification_report(y_true, y_pred, target_names=label_names))
+#
+# """# Prediction"""
+#
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
+# import torchaudio
+# from transformers import AutoConfig, Wav2Vec2Processor
+#
+# import librosa
+# ## import IPython.display as ipd
+# import numpy as np
+# import pandas as pd
+#
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# model_name_or_path = "m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition"
+# config = AutoConfig.from_pretrained(model_name_or_path)
+# processor = Wav2Vec2Processor.from_pretrained(model_name_or_path)
+# sampling_rate = processor.feature_extractor.sampling_rate
+# model = Wav2Vec2ForSpeechClassification.from_pretrained(model_name_or_path).to(device)
+#
+# def speech_file_to_array_fn(path, sampling_rate):
+#     speech_array, _sampling_rate = torchaudio.load(path)
+#     resampler = torchaudio.transforms.Resample(_sampling_rate)
+#     speech = resampler(speech_array).squeeze().numpy()
+#     return speech
+#
+#
+# def predict(path, sampling_rate):
+#     speech = speech_file_to_array_fn(path, sampling_rate)
+#     features = processor(speech, sampling_rate=sampling_rate, return_tensors="pt", padding=True)
+#
+#     input_values = features.input_values.to(device)
+#     attention_mask = features.attention_mask.to(device)
+#
+#     with torch.no_grad():
+#         logits = model(input_values, attention_mask=attention_mask).logits
+#
+#     scores = F.softmax(logits, dim=1).detach().cpu().numpy()[0]
+#     outputs = [{"Emotion": config.id2label[i], "Score": f"{round(score * 100, 3):.1f}%"} for i, score in enumerate(scores)]
+#     return outputs
+#
+#
+# STYLES = """
+# <style>
+# div.display_data {
+#     margin: 0 auto;
+#     max-width: 500px;
+# }
+# table.xxx {
+#     margin: 50px !important;
+#     float: right !important;
+#     clear: both !important;
+# }
+# table.xxx td {
+#     min-width: 300px !important;
+#     text-align: center !important;
+# }
+# </style>
+# """.strip()
+#
+# def prediction(df_row):
+#     path, emotion = df_row["path"], df_row["emotion"]
+#     df = pd.DataFrame([{"Emotion": emotion, "Sentence": "    "}])
+#     setup = {
+#         'border': 2,
+#         'show_dimensions': True,
+#         'justify': 'center',
+#         'classes': 'xxx',
+#         'escape': False,
+#     }
+#     ## ipd.display(ipd.HTML(STYLES + df.to_html(**setup) + "<br />"))
+#     speech, sr = torchaudio.load(path)
+#     speech = speech[0].numpy().squeeze()
+#     speech = librosa.resample(np.asarray(speech), sr, sampling_rate)
+#     ## ipd.display(ipd.Audio(data=np.asarray(speech), autoplay=True, rate=sampling_rate))
+#
+#     outputs = predict(path, sampling_rate)
+#     r = pd.DataFrame(outputs)
+#     ## ipd.display(ipd.HTML(STYLES + r.to_html(**setup) + "<br />"))
+#
+# test = pd.read_csv("./content/data/test.csv", sep="\t")
+# test.head()
+#
+# prediction(test.iloc[0])
+#
+# prediction(test.iloc[1])
+#
+# prediction(test.iloc[2])
