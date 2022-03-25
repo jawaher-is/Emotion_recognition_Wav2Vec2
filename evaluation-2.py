@@ -1,16 +1,17 @@
 """
-Evaluation
+Evaluation of the model [m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition] on Ravdess, Crema, Tess, and Savee datasets.
 """
 
 import librosa
 from sklearn.metrics import classification_report
 from transformers import AutoConfig, Wav2Vec2Processor
-from datasets import load_dataset
+from datasets import Dataset #, load_dataset
 import torch
 import torch.nn as nn
 import torchaudio
 import numpy as np
 from nested_array_catcher import nested_array_catcher
+import pandas as pd
 
 # from emotion_recognition_wav2vec2 import Wav2Vec2ForSpeechClassification, Wav2Vec2ClassificationHead
 from transformers.models.wav2vec2.modeling_wav2vec2 import (
@@ -133,17 +134,41 @@ class Wav2Vec2ForSpeechClassification(Wav2Vec2PreTrainedModel):
         )
 
 
-test_dataset = load_dataset("csv", data_files={"test": "./content/data/test.csv"}, delimiter="\t")["test"]
+test_df = pd.read_csv("./content/data/test.csv", delimiter='\t')
+print(len(test_df.index))
+# change emotion lables
+test_df['emotion'] = test_df['emotion'].replace(['angry'],'anger')
+test_df['emotion'] = test_df['emotion'].replace(['happy'],'happiness')
+test_df['emotion'] = test_df['emotion'].replace(['sad'],'sadness')
+# drop emotion labels 'neutral', 'calm', and 'surprise'
+values = ['neutral', 'calm', 'surprise']
+test_df = test_df[test_df.emotion.isin(values) == False]
+# convert to Dataset
+print(len(test_df.index))
+print(test_df)
+test_dataset = Dataset.from_pandas(test_df)
+test_dataset = test_dataset.remove_columns("__index_level_0__")
+
+# test_dataset = load_dataset("csv", data_files={"test": "./content/data/test.csv"}, delimiter="\t")["test"]
+print(test_dataset)
+ll = test_dataset.unique('emotion')
+print('Labels: ', ll)
+# ['disgust', 'angry', 'fear', 'happy', 'sad', 'neutral', 'surprise','calm']
+#  'disgust', 'anger', 'fear', 'happiness', 'sadness'
+
+print(test_dataset)
+ll = test_dataset.unique('emotion')
+print(ll)
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Device: {device}")
 
-# load the pretrained checkpoint
-# model_name_or_path = "m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition"
-processor_name_or_path = "m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition" ##
-model_name_or_path = "./content/wav2vec2-xlsr-greek-speech-emotion-recognition/checkpoint-1210" ##
+model_name_or_path = "m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition"
+# processor_name_or_path = "m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition"
+# model_name_or_path = "./content/wav2vec2-xlsr-greek-speech-emotion-recognition/checkpoint-1210"
 config = AutoConfig.from_pretrained(model_name_or_path)
-processor = Wav2Vec2Processor.from_pretrained(processor_name_or_path) ##
+processor = Wav2Vec2Processor.from_pretrained(model_name_or_path)
 model = Wav2Vec2ForSpeechClassification.from_pretrained(model_name_or_path).to(device)
 
 def speech_file_to_array_fn(batch):
@@ -152,6 +177,17 @@ def speech_file_to_array_fn(batch):
     speech_array = librosa.resample(np.asarray(speech_array), sampling_rate, processor.feature_extractor.sampling_rate)
 
     speech_array = nested_array_catcher(speech_array)
+
+    # for i in range(len(speech_array)):
+    #     try:
+    #         assert isinstance(speech_array[i], np.float32)
+    #     except Exception as e:
+    #         print(e)
+    #         print(294, type(speech_array[i])) # <class 'numpy.ndarray'>
+    #         if isinstance(speech_array[i], np.ndarray):
+    #             print(speech_array.shape, speech_array[i].shape, speech_array[i])
+    #         speech_array = speech_array[i]
+    #         print('new type: ', type(speech_array), type(speech_array[i]), speech_array, speech_array[i])
 
     batch["speech"] = speech_array
     return batch
@@ -162,6 +198,27 @@ def predict(batch):
 
     input_values = features.input_values.to(device)
     attention_mask = features.attention_mask.to(device)
+
+    # print(168, input_values.shape, len(input_values.shape)) # Tensor [batch_size=8, some_size], 8 1d tensors
+    # for i in range(len(input_values)):
+    #     # input_values[i] = nested_array_catcher(input_values[i], target_type=np.float32)
+    #     # print(186, input_values[i].shape, len(input_values[i].shape), input_values[i]) # 1d tensor
+    #     if len(input_values[i].shape) > 1 :
+    #         print(186, i, len(input_values[i].shape), input_values[i].shape, input_values[i])
+    #     for j in range(len(input_values[i])):
+    #         # print(188, len(input_values[i][j].shape)) #  type(input_values[i][j]), input_values[i][j],
+    #         if len(input_values[i][j].shape) > 1 :
+    #             print(188, i,j, len(input_values[i][j].shape), input_values[i][j].shape, input_values[i][j])
+            # try:
+            #     assert isinstance(input_values[i][j], np.float32)
+            # except Exception as e:
+            #     print(e)
+            #     print(i, j) # 2791 0, 2791 1, 5097 0, 5097 1
+            #     print(294, type(input_values[i]), input_values[i].shape, type(input_values[i][j]), input_values[i][j].shape) # <class 'numpy.ndarray'> <class 'numpy.ndarray'>
+            #     if isinstance(input_values[i][j], np.ndarray):
+            #         print(input_values[i].size, input_values[i][j].size, input_values[i][j])
+            #     input_values[i] = input_values[i][j]
+            #     print('new type: ', type(input_values[i][j]), input_values[i][j], input_values[i])
 
     with torch.no_grad():
         logits = model(input_values, attention_mask=attention_mask).logits

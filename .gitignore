@@ -8,3 +8,4 @@ content/
 Test/
 *.npy
 cpu*.py
+*0.py

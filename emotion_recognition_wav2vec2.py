@@ -83,26 +83,19 @@ from tqdm import tqdm
 from datasets import concatenate_datasets
 import os
 from nested_array_catcher import nested_array_catcher
-# np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 def speech_file_to_array_fn(path):
-    # print('\nin speech_file_to_array_fn')
     speech_array, sampling_rate = torchaudio.load(path)
     resampler = torchaudio.transforms.Resample(sampling_rate, target_sampling_rate)
     speech = resampler(speech_array).squeeze().numpy() #  <class 'numpy.ndarray'>
-    # print('\n263, type(speech)', len(speech))
     return speech
 
 def label_to_id(label, label_list):
-    # print('\nin label_to_id')
     if len(label_list) > 0:
-        # print('\n271, type(label_list)', label_list)
         return label_list.index(label) if label in label_list else -1
-    # print('\n271, type(label)', type(label))
     return label
 
 def preprocess_function(examples):
-    # examples: <class 'datasets.arrow_dataset.Batch'>, examples[input_column]: list of file paths
     speech_list = [speech_file_to_array_fn(path) for path in examples[input_column]]
     target_list = [label_to_id(label, label_list) for label in examples[output_column]]
 
@@ -110,17 +103,16 @@ def preprocess_function(examples):
     result["labels"] = list(target_list) # list of indicies of of target label
 
     for i in range(len(result['input_values'])):
-        for j in range(len(result['input_values'][i])):
-            try:
-                assert isinstance(result['input_values'][i][j], np.float32)
-            except Exception as e:
-                print(e)
-                print(i, j) # 2791 0, 2791 1, 5097 0, 5097 1
-                print(294, type(result['input_values'][i]), type(result['input_values'][i][j])) # <class 'numpy.ndarray'> <class 'numpy.ndarray'>
-                # if isinstance(result['input_values'][i][j], np.ndarray):
-                #     print(result['input_values'][i].shape, result['input_values'][i][j].shape, result['input_values'][i][j])
-                result['input_values'][i] = result['input_values'][i][j]
-                print('new type: ', type(result['input_values'][i][j]), result['input_values'][i][j], result['input_values'][i])
+        result['input_values'][i] = nested_array_catcher(result['input_values'][i])
+        # for j in range(len(result['input_values'][i])):
+        #     try:
+        #         assert isinstance(result['input_values'][i][j], np.float32)
+        #     except Exception as e:
+        #         # print(e)
+        #         print(i, j) # 2791 0, 2791 1, 5097 0, 5097 1
+        #         print(294, type(result['input_values'][i]), type(result['input_values'][i][j])) # <class 'numpy.ndarray'> <class 'numpy.ndarray'>
+        #         result['input_values'][i] = result['input_values'][i][j]
+        #         print('new type: ', type(result['input_values'][i][j]), result['input_values'][i][j], result['input_values'][i])
 
     return result
 
@@ -136,13 +128,12 @@ def preprocess_function(examples):
 #     batched=True,
 #     num_proc=4
 # )
-# print(len(eval_dataset['input_values']))
-# np.save('./features/speech_list_eval_.npy', eval_dataset['input_values'], allow_pickle=True)
-# print(f"\neval features saved to ./features/speech_list_eval_.npy")
-# exit() # slurm-36065.out
 #
+# np.save('./features/speech_list_eval_.npy', eval_dataset['input_values'], allow_pickle=True)
+# print(f"eval features saved to ./features/speech_list_eval_.npy")
+# exit() # slurm-36065.out
 
-def ppf(examples, split):
+def ppf(examples, split): # A single process preprocess_function
     filepath = f'./features/speech_list_{split}.npy'
     if os.path.exists(filepath):
         with open(filepath, 'rb') as f:
@@ -161,8 +152,6 @@ def ppf(examples, split):
     result = processor(speech_list, sampling_rate=target_sampling_rate) # <class 'transformers.feature_extraction_utils.BatchFeature'> , padding=True??
     result["labels"] = list(target_list) # list of indicies of of target label
 
-    # print(327, type(result['input_values']),type(result['input_values'][0]), type(result['input_values'][0][0])) # <class 'list'> <class 'numpy.ndarray'> <class 'numpy.float32'>
-    # print(328, len(result['input_values']), len(result['input_values'][0]), result['input_values'][0][0]) # len:9729 len:29093 =:-0.0030048245
     print('\nASSERTING dtype')
     for i in range(len(result['input_values'])):
         result['input_values'][i] = nested_array_catcher(result['input_values'][i])
@@ -180,7 +169,6 @@ train_dataset_pp = Dataset.from_dict(train_dataset_pp)
 eval_dataset_pp = ppf(eval_dataset, 'eval')
 eval_dataset_pp = Dataset.from_dict(eval_dataset_pp)
 
-# print(334, 'input_values', type(train_dataset_pp['input_values']), type(train_dataset_pp['input_values'][0]), type(train_dataset_pp['input_values'][0][0])) # <class 'list'> <class 'list'> <class 'float'>
 assert len(train_dataset) == len(train_dataset_pp)
 assert len(eval_dataset) == len(eval_dataset_pp)
 train_dataset = concatenate_datasets([train_dataset, train_dataset_pp],axis=1)

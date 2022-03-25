@@ -1,51 +1,8 @@
 """## Prepare Data
 
-For this particular example, we use [Acted Emotional Speech Dynamic Database – AESDD](http://m3c.web.auth.gr/research/aesdd-speech-emotion-recognition/) provided by Multidisciplinary Media & Mediated Communication Research Group ([M3C](http://m3c.web.auth.gr/)).
+Datasets Ravdess, Crema, Tess, and Savee are used in this example.
 
-The Acted Emotional Speech Dynamic Database (AESDD) is a publically available speech emotion recognition dataset that contains utterances of acted emotional speech in the Greek language for five different emotions `sadness`, `disgust`, `happiness`, `anger`, and `fear`.
-
-The dataset consists of directories of emotions; each folder includes specific emotions. We need to loop over directories and save the paths related to each class based on the directory name.
-
-```bash
-.
-├── Tools\ and\ Documentation
-│   ├── ESTrainer.mlapp
-│   ├── Speech\ Emotion\ Recognition\ Adapted\ to\ Multimodal\ Semantic\ Repositories_documentation.pdf
-│   ├── Speech\ Emotion\ Recognition\ for\ Performance\ Interaction.pdf
-│   └── readme.txt
-├── anger
-│   ├── a01\ (1).wav
-│   ├── a01\ (2).wav
-│   ├── ...
-├── disgust
-│   ├── d01\ (1).wav
-│   ├── d01\ (2).wav
-│   ├── ...
-├── fear
-│   ├── f01\ (1).wav
-│   ├── f01\ (2).wav
-│   ├── ...
-├── happiness
-│   ├── h01\ (1).wav
-│   ├── h01\ (2).wav
-│   ├── ...
-└── sadness
-    ├── s01\ (1).wav
-    ├── s01\ (2).wav
-    ├── ...
-
-6 directories, 609 files
-```
-
-Since the dataset is hosted on [Mega](https://mega.nz/#F!0ShVXY7C!-73kVoK05OjTPEA95UUvMw) and unable to access it directly, we upload the dataset on the G-drive to make this tutorial accessible.
 """
-
-# Download the dataset from
-
-# !mkdir -p ./content/data
-# !gdown https://drive.google.com/uc?id=1_IAWexEWpH-ly_JaA5EGfZDp-_3flkN1
-# !unzip -q aesdd.zip -d /content/data/
-# !mv "/content/data/Acted Emotional Speech Dynamic Database/" /content/data/aesdd/
 
 import numpy as np
 import pandas as pd
@@ -229,4 +186,4 @@ test_df.to_csv(f"{save_path}/test.csv", sep="\t", encoding="utf-8", index=False)
 print(train_df.shape)
 print(test_df.shape)
 
-# TODO: think of augmenting the data. Adding noise/ strech
+# TODO: think of augmenting the data. Adding noise/stretch/etc
