@@ -133,7 +133,7 @@ class Wav2Vec2ForSpeechClassification(Wav2Vec2PreTrainedModel):
         )
 
 
-''' Adapt the dataset to m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition model '''
+''' To adapt the dataset to m3hrdadfi/wav2vec2-xlsr-greek-speech-emotion-recognition model, some emotion labels are renamed, and the additional emotions that are not categorized in this model are removed from the dataset'''
 
 test_df = pd.read_csv("./content/data/test.csv", delimiter='\t')
 print(len(test_df.index))

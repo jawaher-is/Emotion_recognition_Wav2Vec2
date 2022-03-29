@@ -20,7 +20,7 @@ This model was shown significant results in many low-resources languages. You ca
 import os
 
 # prepare dataset
-if __name__ == '__main__' and not (os.path.exists("./content/data/train.csv") or os.path.exists("./content/data/train.csv")):
+if __name__ == '__main__' and not (os.path.exists("./content/data/train.csv") and os.path.exists("./content/data/train.csv")):
     import prepare_data_paths
 
 """## Prepare Data for Training"""

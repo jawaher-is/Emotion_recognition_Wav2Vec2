@@ -9,3 +9,4 @@ Test/
 *.npy
 cpu*.py
 *0.py
+*.png
