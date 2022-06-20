@@ -1,4 +1,4 @@
-> An updated version of this project is available in [this repo](https://github.com/jawaher-is/XLSER).
+> An updated version of this project is available in [this repo](https://github.com/jawaher-is/XLSER-ar).
 # Emotion_recognition_Wav2Vec2
 
 Speech Emotion Recognition on [RAVDESS](https://www.kaggle.com/datasets/uwrfkaggler/ravdess-emotional-speech-audio), [CREMA](https://www.kaggle.com/datasets/ejlok1/cremad), [TESS](https://www.kaggle.com/datasets/ejlok1/toronto-emotional-speech-set-tess), and [SAVEE](https://www.kaggle.com/datasets/ejlok1/surrey-audiovisual-expressed-emotion-savee) datasets.
